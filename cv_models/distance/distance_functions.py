@@ -5,9 +5,6 @@ import pandas as pd
 
 
 class DistanceCalculator:
-    """calculate the distance (cm) between user's eyes and laptop screen using webcam 
-    """
-
     # colors to use (in BGR)
     colors = [(76, 168, 240), (255, 0, 255), (255, 255, 0)]
     # instantiation face detection solution
@@ -16,16 +13,6 @@ class DistanceCalculator:
 
     @staticmethod
     def draw_bbox(img, bbox, color, l=30, t=5, rt=1):
-        """draw bounding box around user(s) face
-
-        Args:
-            img (numpy ndarray): video frame
-            bbox (tuple): bounding box data (x,y,width, height)
-            color (tuple): color in BGR
-            l (int, optional): corners lines length. Defaults to 30.
-            t (int, optional): corners lines thickness. Defaults to 5.
-            rt (int, optional): bounding box thickness. Defaults to 1.
-        """
         # draw bbox
         x, y, w, h = bbox
         x1, y1 = x + w, y + h
@@ -46,15 +33,6 @@ class DistanceCalculator:
 
     @staticmethod
     def draw_dist_between_eyes(img, center_left, center_right, color, distance_value):
-        """draw a line between user's eyes and annotate the distance (pixel) between them
-
-        Args:
-            img (numpy ndarray): video frame
-            center_left (tuple): left eye landmark (x,y)
-            center_right (tuple): right eye landmark (x,y)
-            color (tuple): color in BGR
-            distance_value ([type]): distance between eyes (pixel)
-        """
         # mark eyes
         cv2.circle(img, center_left, 1, color, thickness=8)
         cv2.circle(img, center_right, 1, color, thickness=8)
@@ -69,9 +47,6 @@ class DistanceCalculator:
                     2, color, 2)
 
     def run_config(self):
-        """it is used to for the initial configuration of the system where the user needs to measure few distances in cm corresponding to different distances in pixel  
-        """
-
         # webcam input:
         cap = cv2.VideoCapture(0)
         while cap.isOpened():
@@ -120,13 +95,6 @@ class DistanceCalculator:
         cap.release()
 
     def calculate_distance(self, distance_pixel, distance_cm):
-        """calculate distance in cm between user's eyes and laptop screen
-
-        Args:
-            distance_pixel (list): distance between eyes in pixel
-            distance_cm (list): distance to screen in cm
-        """
-
         # get corrlation coffs
         coff = np.polyfit(distance_pixel, distance_cm, 2)
 
