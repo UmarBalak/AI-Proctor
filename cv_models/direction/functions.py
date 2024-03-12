@@ -5,21 +5,7 @@ import numpy as np
 from numpy import greater
 import utils
 import math
-
-# face bounder indices 
-FACE_OVAL=[ 10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103,67, 109]
-
-# lips indices for Landmarks
-LIPS=[ 61, 146, 91, 181, 84, 17, 314, 405, 321, 375,291, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95,185, 40, 39, 37,0 ,267 ,269 ,270 ,409, 415, 310, 311, 312, 13, 82, 81, 42, 183, 78 ]
-LOWER_LIPS =[61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95]
-UPPER_LIPS=[ 185, 40, 39, 37,0 ,267 ,269 ,270 ,409, 415, 310, 311, 312, 13, 82, 81, 42, 183, 78] 
-# Left eyes indices 
-LEFT_EYE =[ 362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385,384, 398 ]
-LEFT_EYEBROW =[ 336, 296, 334, 293, 300, 276, 283, 282, 295, 285 ]
-
-# right eyes indices
-RIGHT_EYE=[ 33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161 , 246 ]  
-RIGHT_EYEBROW=[ 70, 63, 105, 66, 107, 55, 65, 52, 53, 46 ]
+import pandas as pd
 
 # variables 
 frame_counter =0
@@ -166,10 +152,17 @@ def draw_mesh(frame, r_eye_pts, gaze_center):
 
 
 def eye_track(ret, frame, rgb_frame, results):
-    global frame_counter, CEF_COUNTER, TOTAL_BLINKS, frame_counter
+    global frame_counter, CEF_COUNTER, TOTAL_BLINKS, frame_counter, eye_points
+
+    # Left eyes indices 
+    LEFT_EYE =[ 362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385,384, 398 ]
+
+    # right eyes indices
+    RIGHT_EYE=[ 33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161 , 246 ]  
+
     frame_counter +=1 # frame counter
     if not ret: 
-        eye_track()  # no more frames break
+        return None, None, None, None  # no more frames break
 
     if results.multi_face_landmarks:
         mesh_coords = landmarksDetection(frame, results, False)
@@ -178,38 +171,30 @@ def eye_track(ret, frame, rgb_frame, results):
         for i in range(0, 16):
             pt = mesh_coords[RIGHT_EYE[i]]
             l_eye_pts.append(pt)   
-#         for i in range(0, 16):
-#             cv2.circle(frame, l_eye_pts[i], 1, (19, 19, 175), -1, cv2.LINE_AA)
         # Draw a line connecting all points
         pts_array = np.array(l_eye_pts, np.int32)
         pts_array = pts_array.reshape((-1, 1, 2))
-#         cv2.polylines(frame, [pts_array], isClosed=False, color=(19, 19, 175), thickness=1, lineType=cv2.LINE_AA)
 
         r_eye_pts = []
         for i in range(0, 16):
             pt = mesh_coords[LEFT_EYE[i]]
             r_eye_pts.append(pt)
-#         for i in range(0, 16):
-#             cv2.circle(frame, r_eye_pts[i], 1, (19, 19, 175), -1, cv2.LINE_AA)
         # Draw a line connecting all points
         pts_array = np.array(r_eye_pts, np.int32)
         pts_array = pts_array.reshape((-1, 1, 2))
-#         cv2.polylines(frame, [pts_array], isClosed=False, color=(19, 19, 175), thickness=1, lineType=cv2.LINE_AA)
               
         ratio = blinkRatio(frame, mesh_coords, RIGHT_EYE, LEFT_EYE)
-#         utils.colorBackgroundText(frame,  f'Ratio : {round(ratio,2)}', FONTS, 0.7, (30,100),2, utils.PINK, utils.YELLOW)
 
         if ratio > 5.5:
             CEF_COUNTER +=1
-#             utils.colorBackgroundText(frame,  f'Blink', FONTS, 1.7, (int(frame_height/2), 100), 2, utils.YELLOW, pad_x=6, pad_y=6, )
         else:
-            if CEF_COUNTER>CLOSED_EYES_FRAME:
+            if CEF_COUNTER > CLOSED_EYES_FRAME:
                 TOTAL_BLINKS +=1
-                CEF_COUNTER =0
+                CEF_COUNTER = 0
 
-#         utils.colorBackgroundText(frame,  f'Total Blinks: {TOTAL_BLINKS}', FONTS, 0.7, (30,150),2)
-########################################################################################################################   
-    
+    else:
+        return None, None, None, None
+
     frame_h, frame_w, _ = frame.shape
     output = face_mesh.process(rgb_frame)
     landmark_points = output.multi_face_landmarks
@@ -225,15 +210,14 @@ def eye_track(ret, frame, rgb_frame, results):
         center = (int(center[0]), int(center[1]))
         radius = int(radius * 0.75)
         # draw_sharingan(frame, center, radius)            
-            
+    else:
+        return None, None, None, None
+
     direction = direction_estimator_1(r_eye_pts[8], r_eye_pts[0], center, 0.4, 0.3)
-#     direction = direction_estimator_2(extreme_right_circle_right_eye, extreme_left_circle_right_eye, center)
         
     # calculating  frame per seconds FPS
     end_time = time.time()-start_time
     fps = frame_counter/end_time
-    # cv2.imshow('frame', frame)
-    # key = cv2.waitKey(1)
     
     return ratio, TOTAL_BLINKS, direction, fps
 
@@ -291,8 +275,62 @@ def head_pose(frame, results):
             else:
                 text = "Forward"
             
-            return text
+        return text
+    else:
+        return None
         
+
+def calculate_distance(distance_pixel, distance_cm, success, image):
+    # get correlation coefficients
+    coff = np.polyfit(distance_pixel, distance_cm, 2)
+
+    # perform face detection
+    mp_face_detection = mp.solutions.face_detection.FaceDetection(
+        model_selection=0, min_detection_confidence=0.75)
+    while True:
+        if not success:
+            print("Ignoring empty camera frame.")
+            continue
+
+        image.flags.writeable = False
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        results = mp_face_detection.process(image)
+        bbox_list, eyes_list = [], []
+        if results.detections:
+            for detection in results.detections:
+
+                # get bbox data
+                bboxc = detection.location_data.relative_bounding_box
+                ih, iw, ic = image.shape
+                bbox = int(bboxc.xmin*iw), int(bboxc.ymin *
+                                                ih), int(bboxc.width*iw), int(bboxc.height*ih)
+                bbox_list.append(bbox)
+
+                # get the eyes landmark
+                left_eye = detection.location_data.relative_keypoints[0]
+                right_eye = detection.location_data.relative_keypoints[1]
+                eyes_list.append([(int(left_eye.x*iw), int(left_eye.y*ih)),
+                                  (int(right_eye.x*iw), int(right_eye.y*ih))])
+
+        image.flags.writeable = True
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        for bbox, eye in zip(bbox_list, eyes_list):
+
+            # calculate distance between left and right eye
+            dist_between_eyes = np.sqrt(
+                (eye[0][1]-eye[1][1])**2 + (eye[0][0]-eye[1][0])**2)
+
+            # calculate distance in cm
+            a, b, c = coff
+            distance_cm = a*dist_between_eyes**2+b*dist_between_eyes+c
+            distance_cm -= 7
+            
+            return distance_cm
+        
+        else:
+            return None
+
+
 
 def run():
     ret, frame = camera.read()
@@ -300,14 +338,31 @@ def run():
     frame = cv2.resize(frame, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
     frame_height, frame_width, _ = frame.shape
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-    results  = face_mesh.process(rgb_frame)
+    results = face_mesh.process(rgb_frame)
+
     blink_ratio, total_blinks, eye_direction, fps = eye_track(ret, frame, rgb_frame, results)
+    if blink_ratio is None or total_blinks is None or eye_direction is None:
+        # case where no face is detected
+        blink_ratio = 0
+        total_blinks = 0
+        eye_direction = "No face detected"
+        fps = 0
+
     head_direction = head_pose(rgb_frame, results)
+    if head_direction is None:
+        # case where no face is detected
+        head_direction = "No face detected"
+
+    distance_df = pd.read_csv('distance_xy.csv')
+    distance_pixel = distance_df['distance_pixel'].tolist()
+    distance_cm = distance_df['distance_cm'].tolist()
+    distance_cm = calculate_distance(distance_pixel, distance_cm, ret, frame)
+
     end = time.time()
-    totalTime = end - start_time
-    
+    totalTime = end - start_time  
     if totalTime > 0:
         fps = 1 / totalTime
     else:
         fps = 0
-    return {"blink_ratio": blink_ratio, "total_blinks": total_blinks, "eye_direction": eye_direction, "head_direction": head_direction, "fps": fps}
+
+    return {"blink_ratio": blink_ratio, "total_blinks": total_blinks, "eye_direction": eye_direction, "head_direction": head_direction, "distance": distance_cm, "fps": fps}
