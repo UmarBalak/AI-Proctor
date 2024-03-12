@@ -163,12 +163,12 @@ def draw_mesh(frame, r_eye_pts, gaze_center):
         distance[i] = dist
 
 
-def run():
+def eye_track():
     global frame_counter, CEF_COUNTER, TOTAL_BLINKS, frame_counter
     frame_counter +=1 # frame counter
     ret, frame = camera.read()
     if not ret: 
-        run()  # no more frames break
+        eye_track()  # no more frames break
 
     frame = cv2.flip(frame, 1)
     frame = cv2.resize(frame, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
