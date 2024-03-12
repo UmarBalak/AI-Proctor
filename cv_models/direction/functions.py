@@ -33,6 +33,8 @@ FONTS =cv2.FONT_HERSHEY_COMPLEX
 
 map_face_mesh = mp.solutions.face_mesh
 face_mesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
+mp_drawing = mp.solutions.drawing_utils
+drawing_spec = mp_drawing.DrawingSpec(color=(255, 255, 255),thickness=1,circle_radius=1)
 
 camera = cv2.VideoCapture(0)
 
@@ -163,18 +165,11 @@ def draw_mesh(frame, r_eye_pts, gaze_center):
         distance[i] = dist
 
 
-def eye_track():
+def eye_track(ret, frame, rgb_frame, results):
     global frame_counter, CEF_COUNTER, TOTAL_BLINKS, frame_counter
     frame_counter +=1 # frame counter
-    ret, frame = camera.read()
     if not ret: 
         eye_track()  # no more frames break
-
-    frame = cv2.flip(frame, 1)
-    frame = cv2.resize(frame, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
-    frame_height, frame_width, _ = frame.shape
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-    results  = face_mesh.process(rgb_frame)
 
     if results.multi_face_landmarks:
         mesh_coords = landmarksDetection(frame, results, False)
@@ -240,4 +235,79 @@ def eye_track():
     # cv2.imshow('frame', frame)
     # key = cv2.waitKey(1)
     
-    return {"blink_ratio": ratio, "total_blinks": TOTAL_BLINKS, "direction": direction, "fps": fps} 
+    return ratio, TOTAL_BLINKS, direction, fps
+
+
+def head_pose(frame, results):
+    
+    img_h,img_w,Img_c = frame.shape
+    face_3d = []
+    face_2d = []
+    
+    if results.multi_face_landmarks:
+        for face_landmarks in results.multi_face_landmarks:
+            for idx, lm in enumerate(face_landmarks.landmark):
+                if idx == 33 or idx == 263 or idx == 1 or idx == 61 or idx == 291 or idx == 199:
+                    if idx == 1:
+                        nose_2d = (lm.x * img_w , lm.y * img_h)
+                        nose_3d = (lm.x * img_w , lm.y * img_h , lm.z * 3000)
+                    
+                    x , y = int(lm.x * img_w) , int(lm.y * img_h)
+                    
+                    face_2d.append([x, y])
+                    
+                    face_3d.append([x, y, lm.z])
+                    
+            face_2d = np.array(face_2d, dtype = np.float64)
+            
+            face_3d = np.array(face_3d, dtype = np.float64)
+            
+            focal_length = 1 * img_w
+            
+            cam_matrix = np.array([[focal_length, 0, img_h / 2],
+                                  [0 ,focal_length, img_w / 2],
+                                  [0 ,0 ,1]])
+            
+            dist_matrix = np.zeros((4,1),dtype= np.float64)
+            
+            success, rot_vec, trans_vec = cv2.solvePnP(face_3d, face_2d, cam_matrix, dist_matrix)
+            
+            rmat, jac = cv2.Rodrigues(rot_vec)
+            
+            angles , mtxR , mtxQ , Qx , Qy , Qz = cv2.RQDecomp3x3(rmat)
+            
+            x = angles[0] * 360
+            y = angles[1] * 360
+            z = angles[2] * 360
+            
+            if y < -18:
+                text = "Looking Left"
+            elif y > 20:
+                text = "Looking Right"
+            elif x < -10:
+                text = "Looking Down"
+            elif x > 20:
+                text = "Looking Up"
+            else:
+                text = "Forward"
+            
+            return text
+        
+
+def run():
+    ret, frame = camera.read()
+    frame = cv2.flip(frame, 1)
+    frame = cv2.resize(frame, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
+    frame_height, frame_width, _ = frame.shape
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    results  = face_mesh.process(rgb_frame)
+    blink_ratio, total_blinks, eye_direction, fps = eye_track(ret, frame, rgb_frame, results)
+    head_direction = head_pose(rgb_frame, results)
+    end = time.time()
+    totalTime = end - start_time
+    
+    if totalTime > 0:
+        fps = 1 / totalTime
+    else:
+        fps = 0
+    return {"blink_ratio": blink_ratio, "total_blinks": total_blinks, "eye_direction": eye_direction, "head_direction": head_direction, "fps": fps}
