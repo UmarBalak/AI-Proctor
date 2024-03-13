@@ -45,7 +45,6 @@ def obj_detect(image):
                 cvzone.putTextRect(image, f'{classNames[cls]} {conf}', (max(0, x1), max(35, y1)), scale=1, thickness=1) 
 
                 count[classNames[int(box.cls[0])]] += 1  # Increment count 
-                
     cv2.imshow("Image", image)
     cv2.waitKey(1)
     return count
