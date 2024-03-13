@@ -109,11 +109,11 @@ def direction_estimator_1(extreme_right_circle_right_eye, extreme_left_circle_ri
     dist_gaze_and_leftOfRight = gaze_center[0] - extreme_left_circle_right_eye[0]
     eye_width = extreme_right_circle_right_eye[0] - extreme_left_circle_right_eye[0]
     if dist_gaze_and_rightOfRight < (eye_width * r_eye_threshold):
-        direction = "right"
+        direction = "Right"
     elif dist_gaze_and_leftOfRight < (eye_width * l_eye_threshold):
-        direction = "left"
+        direction = "Left"
     else:
-        direction = "center"
+        direction = "Center"
     return direction
 
 def direction_estimator_2(r_eye_pts, gaze_center):
@@ -127,11 +127,11 @@ def direction_estimator_2(r_eye_pts, gaze_center):
     required_keys_for_left = {2, 3, 13, 14}
     required_keys_for_right = {6, 7, 10, 11}
     if required_keys_for_left.issubset(keys):
-        direction = "left"
+        direction = "Left"
     elif required_keys_for_right.issubset(keys):
-        direction = "right"
+        direction = "Right"
     else:
-        direction = "center"
+        direction = "Center"
     return direction
 
 
@@ -182,46 +182,38 @@ def eye_track(ret, frame, rgb_frame, results):
     RIGHT_EYE=[ 33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161 , 246 ]  
 
     frame_counter +=1 # frame counter
-    if not ret: 
-        return None, False  # no more frames break
 
-    face_detected = False  # Flag to indicate if a face is detected
+    mesh_coords = landmarksDetection(frame, results, False)
 
-    if results.multi_face_landmarks:
-        face_detected = True
-        mesh_coords = landmarksDetection(frame, results, False)
+    l_eye_pts = []
+    for i in range(0, 16):
+        pt = mesh_coords[RIGHT_EYE[i]]
+        l_eye_pts.append(pt)   
+    # Draw a line connecting all points
+    pts_array = np.array(l_eye_pts, np.int32)
+    pts_array = pts_array.reshape((-1, 1, 2))
 
-        l_eye_pts = []
-        for i in range(0, 16):
-            pt = mesh_coords[RIGHT_EYE[i]]
-            l_eye_pts.append(pt)   
-        # Draw a line connecting all points
-        pts_array = np.array(l_eye_pts, np.int32)
-        pts_array = pts_array.reshape((-1, 1, 2))
+    r_eye_pts = []
+    for i in range(0, 16):
+        pt = mesh_coords[LEFT_EYE[i]]
+        r_eye_pts.append(pt)
+    # Draw a line connecting all points
+    pts_array = np.array(r_eye_pts, np.int32)
+    pts_array = pts_array.reshape((-1, 1, 2))
 
-        r_eye_pts = []
-        for i in range(0, 16):
-            pt = mesh_coords[LEFT_EYE[i]]
-            r_eye_pts.append(pt)
-        # Draw a line connecting all points
-        pts_array = np.array(r_eye_pts, np.int32)
-        pts_array = pts_array.reshape((-1, 1, 2))
-              
-        ratio = blinkRatio(frame, mesh_coords, RIGHT_EYE, LEFT_EYE)
+    ratio = blinkRatio(frame, mesh_coords, RIGHT_EYE, LEFT_EYE)
 
-        if ratio > 5.5:
-            CEF_COUNTER +=1
-        else:
-            if CEF_COUNTER > CLOSED_EYES_FRAME:
-                TOTAL_BLINKS +=1
-                CEF_COUNTER = 0
-
+    if ratio > 5.5:
+        CEF_COUNTER +=1
     else:
-        return None, False
+        if CEF_COUNTER > CLOSED_EYES_FRAME:
+            TOTAL_BLINKS +=1
+            CEF_COUNTER = 0
 
     frame_h, frame_w, _ = frame.shape
     output = face_mesh.process(rgb_frame)
     landmark_points = output.multi_face_landmarks
+    
     if landmark_points:
         landmarks = landmark_points[0].landmark   
         
@@ -234,12 +226,10 @@ def eye_track(ret, frame, rgb_frame, results):
         center = (int(center[0]), int(center[1]))
         radius = int(radius * 0.75)
         # draw_sharingan(frame, center, radius)            
-    else:
-        return None, False
 
     direction = direction_estimator_1(r_eye_pts[8], r_eye_pts[0], center, 0.4, 0.3)
     
-    return  direction, face_detected
+    return direction
 
 
 def head_pose(frame, results):
@@ -247,57 +237,53 @@ def head_pose(frame, results):
     face_3d = []
     face_2d = []
 
-    if results.multi_face_landmarks:
-        face_detected = True
-        for face_landmarks in results.multi_face_landmarks:
-            for idx, lm in enumerate(face_landmarks.landmark):
-                if idx == 33 or idx == 263 or idx == 1 or idx == 61 or idx == 291 or idx == 199:
-                    if idx == 1:
-                        nose_2d = (lm.x * img_w, lm.y * img_h)
-                        nose_3d = (lm.x * img_w, lm.y * img_h, lm.z * 3000)
+    for face_landmarks in results.multi_face_landmarks:
+        for idx, lm in enumerate(face_landmarks.landmark):
+            if idx == 33 or idx == 263 or idx == 1 or idx == 61 or idx == 291 or idx == 199:
+                if idx == 1:
+                    nose_2d = (lm.x * img_w, lm.y * img_h)
+                    nose_3d = (lm.x * img_w, lm.y * img_h, lm.z * 3000)
 
-                    x, y = int(lm.x * img_w), int(lm.y * img_h)
+                x, y = int(lm.x * img_w), int(lm.y * img_h)
 
-                    face_2d.append([x, y])
+                face_2d.append([x, y])
 
-                    face_3d.append([x, y, lm.z])
+                face_3d.append([x, y, lm.z])
 
-            face_2d = np.array(face_2d, dtype=np.float64)
+        face_2d = np.array(face_2d, dtype=np.float64)
 
-            face_3d = np.array(face_3d, dtype=np.float64)
+        face_3d = np.array(face_3d, dtype=np.float64)
 
-            focal_length = 1 * img_w
+        focal_length = 1 * img_w
 
-            cam_matrix = np.array([[focal_length, 0, img_h / 2],
-                                   [0, focal_length, img_w / 2],
-                                   [0, 0, 1]])
+        cam_matrix = np.array([[focal_length, 0, img_h / 2],
+                               [0, focal_length, img_w / 2],
+                               [0, 0, 1]])
 
-            dist_matrix = np.zeros((4, 1), dtype=np.float64)
+        dist_matrix = np.zeros((4, 1), dtype=np.float64)
 
-            success, rot_vec, trans_vec = cv2.solvePnP(face_3d, face_2d, cam_matrix, dist_matrix)
+        success, rot_vec, trans_vec = cv2.solvePnP(face_3d, face_2d, cam_matrix, dist_matrix)
 
-            rmat, jac = cv2.Rodrigues(rot_vec)
+        rmat, jac = cv2.Rodrigues(rot_vec)
 
-            angles, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rmat)
+        angles, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rmat)
 
-            x = angles[0] * 360
-            y = angles[1] * 360
-            z = angles[2] * 360
+        x = angles[0] * 360
+        y = angles[1] * 360
+        z = angles[2] * 360
 
-            if y < -15:
-                text = "Left"
-            elif y > 10:
-                text = "Right"
-            elif x < -18:
-                text = "Down"
-            elif x > 15:
-                text = "Up"
-            else:
-                text = "Forward"
+        if y < -15:
+            text = "Left"
+        elif y > 10:
+            text = "Right"
+        elif x < -18:
+            text = "Down"
+        elif x > 15:
+            text = "Up"
+        else:
+            text = "Center"
 
-        return text, face_detected
-    else:
-        return None, False
+    return text
         
 
 def calculate_distance(distance_pixel, distance_cm, success, image):
@@ -339,13 +325,9 @@ def calculate_distance(distance_pixel, distance_cm, success, image):
         # calculate distance in cm
         a, b, c = coff
         distance_cm = a * dist_between_eyes ** 2 + b * dist_between_eyes + c
-        distance_cm -= 7
+        distance_cm -= 0
 
         return distance_cm
-        
-    # If no face detected, return None
-    return None
-
 
 
 def obj_detect(success, img, model, classNames,  desired_features):
@@ -381,37 +363,33 @@ def run():
     frame_height, frame_width, _ = frame.shape
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
     results = face_mesh.process(rgb_frame)
-
-#     eye_direction, face_detected = eye_track(ret, frame, rgb_frame, results)
-#     if eye_direction is None and face_detected is False:
-#         eye_direction = "No face detected"
-#         face_detected = False
-
-#     head_direction, face_detected = head_pose(rgb_frame, results)
-#     if head_direction is None and face_detected is False:
-#         head_direction = "No face detected"
-#         face_detected = False
-
-    distance_df = pd.read_csv('distance_xy.csv')
-    distance_pixel = distance_df['distance_pixel'].tolist()
-    distance_cm = distance_df['distance_cm'].tolist()
-    distance_cm = str(calculate_distance(distance_pixel, distance_cm, ret, frame))
-    if distance_cm == 'None':
-        distance_cm = "No face detected"
-
-    # count = obj_detect(ret, frame, model, classNames,  desired_features)
-
-    end = time.time()
-    totalTime = end - start_time  
-    if totalTime > 0:
-        fps = 1 / totalTime
-    else:
-        fps = 0
     
-#     return {"eye_direction": eye_direction, "face_detected": face_detected} 
-#     return {"head_direction": head_direction, "face_detected": face_detected}
-    return {"distance": distance_cm} 
+    direction = ''
+    
+    if results.multi_face_landmarks:
+        
+        head_direction = head_pose(rgb_frame, results)
+        
+        if head_direction in ["Center", "Up"]:
+            eye_direction = eye_track(ret, frame,  rgb_frame, results)
+            direction = eye_direction      
+        else:
+            direction = head_direction
 
-    # return {"blink_ratio": blink_ratio, "total_blinks": total_blinks, "eye_direction": eye_direction,
-    #         "head_direction": head_direction, "distance": distance_cm, "fps": fps,
-    #         "person_count": count["person"], "book_count": count["book"], "cell_phone_count": count["cell phone"], "laptop_count": count["laptop"]}
+        distance_df = pd.read_csv('distance_xy.csv')
+        distance_pixel = distance_df['distance_pixel'].tolist()
+        distance_cm = distance_df['distance_cm'].tolist()
+        distance_cm = calculate_distance(distance_pixel, distance_cm, ret, frame)
+
+        # count = obj_detect(ret, frame, model, classNames,  desired_features)
+
+        end = time.time()
+        totalTime = end - start_time  
+        if totalTime > 0:
+            fps = 1 / totalTime
+        else:
+            fps = 0
+    
+        return {"direction": direction, "distance": distance_cm}
+    else:
+        return {"face_detected": False}
