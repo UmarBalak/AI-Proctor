@@ -7,6 +7,27 @@ import utils
 import math
 import pandas as pd
 
+####################################################################
+# from ultralytics import YOLO
+# from ultralytics import YOLOWorld
+# import cvzone
+# import torch
+# model = YOLOWorld('yolov8s-world.pt')
+classNames = [
+    "person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
+    "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
+    "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella",
+    "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat",
+    "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup",
+    "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli",
+    "carrot", "hot dog", "pizza", "donut", "cake", "chair", "sofa", "pottedplant", "bed",
+    "diningtable", "toilet", "tvmonitor", "laptop", "mouse", "remote", "keyboard", "cell phone",
+    "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors",
+    "teddy bear", "hair drier", "toothbrush"
+]
+desired_features = ["person", "book", "cell phone", "laptop"]
+####################################################################
+
 # variables 
 frame_counter =0
 CEF_COUNTER =0
@@ -162,9 +183,12 @@ def eye_track(ret, frame, rgb_frame, results):
 
     frame_counter +=1 # frame counter
     if not ret: 
-        return None, None, None, None  # no more frames break
+        return None, False  # no more frames break
+
+    face_detected = False  # Flag to indicate if a face is detected
 
     if results.multi_face_landmarks:
+        face_detected = True
         mesh_coords = landmarksDetection(frame, results, False)
 
         l_eye_pts = []
@@ -193,7 +217,7 @@ def eye_track(ret, frame, rgb_frame, results):
                 CEF_COUNTER = 0
 
     else:
-        return None, None, None, None
+        return None, False
 
     frame_h, frame_w, _ = frame.shape
     output = face_mesh.process(rgb_frame)
@@ -211,73 +235,69 @@ def eye_track(ret, frame, rgb_frame, results):
         radius = int(radius * 0.75)
         # draw_sharingan(frame, center, radius)            
     else:
-        return None, None, None, None
+        return None, False
 
     direction = direction_estimator_1(r_eye_pts[8], r_eye_pts[0], center, 0.4, 0.3)
-        
-    # calculating  frame per seconds FPS
-    end_time = time.time()-start_time
-    fps = frame_counter/end_time
     
-    return ratio, TOTAL_BLINKS, direction, fps
+    return  direction, face_detected
 
 
 def head_pose(frame, results):
-    
-    img_h,img_w,Img_c = frame.shape
+    img_h, img_w, Img_c = frame.shape
     face_3d = []
     face_2d = []
-    
+
     if results.multi_face_landmarks:
+        face_detected = True
         for face_landmarks in results.multi_face_landmarks:
             for idx, lm in enumerate(face_landmarks.landmark):
                 if idx == 33 or idx == 263 or idx == 1 or idx == 61 or idx == 291 or idx == 199:
                     if idx == 1:
-                        nose_2d = (lm.x * img_w , lm.y * img_h)
-                        nose_3d = (lm.x * img_w , lm.y * img_h , lm.z * 3000)
-                    
-                    x , y = int(lm.x * img_w) , int(lm.y * img_h)
-                    
+                        nose_2d = (lm.x * img_w, lm.y * img_h)
+                        nose_3d = (lm.x * img_w, lm.y * img_h, lm.z * 3000)
+
+                    x, y = int(lm.x * img_w), int(lm.y * img_h)
+
                     face_2d.append([x, y])
-                    
+
                     face_3d.append([x, y, lm.z])
-                    
-            face_2d = np.array(face_2d, dtype = np.float64)
-            
-            face_3d = np.array(face_3d, dtype = np.float64)
-            
+
+            face_2d = np.array(face_2d, dtype=np.float64)
+
+            face_3d = np.array(face_3d, dtype=np.float64)
+
             focal_length = 1 * img_w
-            
+
             cam_matrix = np.array([[focal_length, 0, img_h / 2],
-                                  [0 ,focal_length, img_w / 2],
-                                  [0 ,0 ,1]])
-            
-            dist_matrix = np.zeros((4,1),dtype= np.float64)
-            
+                                   [0, focal_length, img_w / 2],
+                                   [0, 0, 1]])
+
+            dist_matrix = np.zeros((4, 1), dtype=np.float64)
+
             success, rot_vec, trans_vec = cv2.solvePnP(face_3d, face_2d, cam_matrix, dist_matrix)
-            
+
             rmat, jac = cv2.Rodrigues(rot_vec)
-            
-            angles , mtxR , mtxQ , Qx , Qy , Qz = cv2.RQDecomp3x3(rmat)
-            
+
+            angles, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rmat)
+
             x = angles[0] * 360
             y = angles[1] * 360
             z = angles[2] * 360
-            
-            if y < -18:
-                text = "Looking Left"
-            elif y > 20:
-                text = "Looking Right"
-            elif x < -10:
-                text = "Looking Down"
-            elif x > 20:
-                text = "Looking Up"
+
+            if y < -15:
+                text = "Left"
+            elif y > 10:
+                text = "Right"
+            elif x < -18:
+                text = "Down"
+            elif x > 15:
+                text = "Up"
             else:
                 text = "Forward"
-            
-        return text
+
+        return text, face_detected
     else:
-        return None
+        return None, False
         
 
 def calculate_distance(distance_pixel, distance_cm, success, image):
@@ -287,49 +307,71 @@ def calculate_distance(distance_pixel, distance_cm, success, image):
     # perform face detection
     mp_face_detection = mp.solutions.face_detection.FaceDetection(
         model_selection=0, min_detection_confidence=0.75)
-    while True:
-        if not success:
-            print("Ignoring empty camera frame.")
-            continue
+    
+    
+    image.flags.writeable = False
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    results = mp_face_detection.process(image)
+    bbox_list, eyes_list = [], []
+    if results.detections:
+        for detection in results.detections:
 
-        image.flags.writeable = False
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = mp_face_detection.process(image)
-        bbox_list, eyes_list = [], []
-        if results.detections:
-            for detection in results.detections:
+            # get bbox data
+            bboxc = detection.location_data.relative_bounding_box
+            ih, iw, ic = image.shape
+            bbox = int(bboxc.xmin * iw), int(bboxc.ymin * ih), int(bboxc.width * iw), int(bboxc.height * ih)
+            bbox_list.append(bbox)
 
-                # get bbox data
-                bboxc = detection.location_data.relative_bounding_box
-                ih, iw, ic = image.shape
-                bbox = int(bboxc.xmin*iw), int(bboxc.ymin *
-                                                ih), int(bboxc.width*iw), int(bboxc.height*ih)
-                bbox_list.append(bbox)
+            # get the eyes landmark
+            left_eye = detection.location_data.relative_keypoints[0]
+            right_eye = detection.location_data.relative_keypoints[1]
+            eyes_list.append([(int(left_eye.x * iw), int(left_eye.y * ih)),
+                              (int(right_eye.x * iw), int(right_eye.y * ih))])
 
-                # get the eyes landmark
-                left_eye = detection.location_data.relative_keypoints[0]
-                right_eye = detection.location_data.relative_keypoints[1]
-                eyes_list.append([(int(left_eye.x*iw), int(left_eye.y*ih)),
-                                  (int(right_eye.x*iw), int(right_eye.y*ih))])
+    image.flags.writeable = True
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    for bbox, eye in zip(bbox_list, eyes_list):
 
-        image.flags.writeable = True
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        for bbox, eye in zip(bbox_list, eyes_list):
+        # calculate distance between left and right eye
+        dist_between_eyes = np.sqrt(
+            (eye[0][1] - eye[1][1]) ** 2 + (eye[0][0] - eye[1][0]) ** 2)
 
-            # calculate distance between left and right eye
-            dist_between_eyes = np.sqrt(
-                (eye[0][1]-eye[1][1])**2 + (eye[0][0]-eye[1][0])**2)
+        # calculate distance in cm
+        a, b, c = coff
+        distance_cm = a * dist_between_eyes ** 2 + b * dist_between_eyes + c
+        distance_cm -= 7
 
-            # calculate distance in cm
-            a, b, c = coff
-            distance_cm = a*dist_between_eyes**2+b*dist_between_eyes+c
-            distance_cm -= 7
-            
-            return distance_cm
+        return distance_cm
         
-        else:
-            return None
+    # If no face detected, return None
+    return None
 
+
+
+def obj_detect(success, img, model, classNames,  desired_features):
+    if not success:
+        return {"person": None, "book": None, "cell phone": None, "laptop": None}
+    img = cv2.flip(img, 1)
+    results = model.predict(img, device='cpu', save=True)
+
+    for r in results:
+        boxes = r.boxes
+        count = {"person": 0, "book": 0, "cell phone": 0, "laptop": 0}
+
+        for box in boxes:
+            # Detect and process person objects
+            if classNames[int(box.cls[0])] in desired_features:
+                x1, y1, x2, y2 = box.xyxy[0]
+                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                
+                w, h = x2 - x1, y2 - y1
+                cvzone.cornerRect(img, (x1, y1, w, h))
+                conf = math.ceil((box.conf[0] * 100)) / 100
+                cls = int(box.cls[0])
+                cvzone.putTextRect(img, f'{classNames[cls]} {conf}', (max(0, x1), max(35, y1)), scale=1, thickness=1) 
+
+                count[classNames[int(box.cls[0])]] += 1  # Increment count 
+    return count
 
 
 def run():
@@ -340,23 +382,24 @@ def run():
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
     results = face_mesh.process(rgb_frame)
 
-    blink_ratio, total_blinks, eye_direction, fps = eye_track(ret, frame, rgb_frame, results)
-    if blink_ratio is None or total_blinks is None or eye_direction is None:
-        # case where no face is detected
-        blink_ratio = 0
-        total_blinks = 0
-        eye_direction = "No face detected"
-        fps = 0
+#     eye_direction, face_detected = eye_track(ret, frame, rgb_frame, results)
+#     if eye_direction is None and face_detected is False:
+#         eye_direction = "No face detected"
+#         face_detected = False
 
-    head_direction = head_pose(rgb_frame, results)
-    if head_direction is None:
-        # case where no face is detected
-        head_direction = "No face detected"
+#     head_direction, face_detected = head_pose(rgb_frame, results)
+#     if head_direction is None and face_detected is False:
+#         head_direction = "No face detected"
+#         face_detected = False
 
     distance_df = pd.read_csv('distance_xy.csv')
     distance_pixel = distance_df['distance_pixel'].tolist()
     distance_cm = distance_df['distance_cm'].tolist()
-    distance_cm = calculate_distance(distance_pixel, distance_cm, ret, frame)
+    distance_cm = str(calculate_distance(distance_pixel, distance_cm, ret, frame))
+    if distance_cm == 'None':
+        distance_cm = "No face detected"
+
+    # count = obj_detect(ret, frame, model, classNames,  desired_features)
 
     end = time.time()
     totalTime = end - start_time  
@@ -364,5 +407,11 @@ def run():
         fps = 1 / totalTime
     else:
         fps = 0
+    
+#     return {"eye_direction": eye_direction, "face_detected": face_detected} 
+#     return {"head_direction": head_direction, "face_detected": face_detected}
+    return {"distance": distance_cm} 
 
-    return {"blink_ratio": blink_ratio, "total_blinks": total_blinks, "eye_direction": eye_direction, "head_direction": head_direction, "distance": distance_cm, "fps": fps}
+    # return {"blink_ratio": blink_ratio, "total_blinks": total_blinks, "eye_direction": eye_direction,
+    #         "head_direction": head_direction, "distance": distance_cm, "fps": fps,
+    #         "person_count": count["person"], "book_count": count["book"], "cell_phone_count": count["cell phone"], "laptop_count": count["laptop"]}
