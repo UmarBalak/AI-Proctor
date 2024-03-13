@@ -7,27 +7,6 @@ import utils
 import math
 import pandas as pd
 
-####################################################################
-# from ultralytics import YOLO
-# from ultralytics import YOLOWorld
-# import cvzone
-# import torch
-# model = YOLOWorld('yolov8s-world.pt')
-classNames = [
-    "person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
-    "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
-    "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella",
-    "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat",
-    "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup",
-    "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli",
-    "carrot", "hot dog", "pizza", "donut", "cake", "chair", "sofa", "pottedplant", "bed",
-    "diningtable", "toilet", "tvmonitor", "laptop", "mouse", "remote", "keyboard", "cell phone",
-    "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors",
-    "teddy bear", "hair drier", "toothbrush"
-]
-desired_features = ["person", "book", "cell phone", "laptop"]
-####################################################################
-
 # variables 
 frame_counter =0
 CEF_COUNTER =0
@@ -330,32 +309,6 @@ def calculate_distance(distance_pixel, distance_cm, success, image):
         return distance_cm
 
 
-def obj_detect(success, img, model, classNames,  desired_features):
-    if not success:
-        return {"person": None, "book": None, "cell phone": None, "laptop": None}
-    img = cv2.flip(img, 1)
-    results = model.predict(img, device='cpu', save=True)
-
-    for r in results:
-        boxes = r.boxes
-        count = {"person": 0, "book": 0, "cell phone": 0, "laptop": 0}
-
-        for box in boxes:
-            # Detect and process person objects
-            if classNames[int(box.cls[0])] in desired_features:
-                x1, y1, x2, y2 = box.xyxy[0]
-                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                
-                w, h = x2 - x1, y2 - y1
-                cvzone.cornerRect(img, (x1, y1, w, h))
-                conf = math.ceil((box.conf[0] * 100)) / 100
-                cls = int(box.cls[0])
-                cvzone.putTextRect(img, f'{classNames[cls]} {conf}', (max(0, x1), max(35, y1)), scale=1, thickness=1) 
-
-                count[classNames[int(box.cls[0])]] += 1  # Increment count 
-    return count
-
-
 def run():
     ret, frame = camera.read()
     frame = cv2.flip(frame, 1)
@@ -380,8 +333,6 @@ def run():
         distance_pixel = distance_df['distance_pixel'].tolist()
         distance_cm = distance_df['distance_cm'].tolist()
         distance_cm = calculate_distance(distance_pixel, distance_cm, ret, frame)
-
-        # count = obj_detect(ret, frame, model, classNames,  desired_features)
 
         end = time.time()
         totalTime = end - start_time  
