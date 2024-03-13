@@ -311,6 +311,7 @@ def calculate_distance(distance_pixel, distance_cm, success, image):
 
 def run():
     ret, frame = camera.read()
+#     print(frame)
     frame = cv2.flip(frame, 1)
     frame = cv2.resize(frame, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
     frame_height, frame_width, _ = frame.shape
@@ -334,13 +335,13 @@ def run():
         distance_cm = distance_df['distance_cm'].tolist()
         distance_cm = calculate_distance(distance_pixel, distance_cm, ret, frame)
 
-        end = time.time()
-        totalTime = end - start_time  
-        if totalTime > 0:
-            fps = 1 / totalTime
-        else:
-            fps = 0
+#         end = time.time()
+#         totalTime = end - start_time  
+#         if totalTime > 0:
+#             fps = 1 / totalTime
+#         else:
+#             fps = 0
     
         return {"direction": direction, "distance": distance_cm}
     else:
-        return {"face_detected": False}
+        return {"face_detected": "jaldi waha se hatooo"}
