@@ -13,6 +13,7 @@ import pygame
 change_dir_counter = 0
 dir_warning_counter = 0
 vis_warning_counter = 0
+warning_count = 0
 terminate_exam = False
 visibility_counter = 0
 
@@ -324,7 +325,7 @@ def calculate_distance(distance_pixel, distance_cm, success, image):
 
 
 def run():
-    global change_dir_counter, start_time, dir_warning_counter, terminate_exam, visibility_counter, vis_warning_counter
+    global change_dir_counter, start_time, dir_warning_counter, terminate_exam, visibility_counter, vis_warning_counter, warning_count
     ret, frame = camera.read()
 #     print(frame)
     frame = cv2.flip(frame, 1)
@@ -356,36 +357,47 @@ def run():
         start_time = end      
 #         print(fps)  
 
+        
+#         if direction in ["Right", "Left", "Up"]:
+#             change_dir_counter += (1/fps)
+#             if change_dir_counter > 5:
+#                 change_dir_counter = 0
+
+
         if direction in ["Right", "Left", "Up"]:
             change_dir_counter += (1/fps)
-            if change_dir_counter > 5:
+            if change_dir_counter > 2:
                 change_dir_counter = 0
                 dir_warning_counter += 1
-                if dir_warning_counter > 3:
+                warning_count += 1
+                if dir_warning_counter > 3 or warning_count > 3:
                     terminate_exam = True
                     speak("Exam Terminated: The exam has been stopped due to inappropriate behavior detected.")
-                    return {"Stop the exam": "Exam terminated due to candidate misconduct.", "termination": terminate_exam}
+                    return {"result": "Exam terminated due to candidate misconduct.", "termination": terminate_exam}
                 speak("Alert: It seems you are not facing the camera.")
-                return {"direction": f"Alert {dir_warning_counter}: It seems you are not facing the camera.", "termination": terminate_exam}
+                return {"result": f"Alert {dir_warning_counter}: It seems you are not facing the camera.", "termination": terminate_exam}
         
-            return {"direction": "All good !", "termination": terminate_exam}
+            return {"result": "All good !", "termination": terminate_exam}
         
         else:          
-            return {"direction": "All good !", "termination": terminate_exam}
+            return {"result": "All good !", "termination": terminate_exam}
     else:
         end = time.time()
         totalTime = end - start_time  
         fps = 1 / totalTime
         start_time = end
         
-        speak("Attention: Your face is not visible to the camera.")
         visibility_counter += (1/fps)
         if visibility_counter > 5:
                 visibility_counter = 0
                 vis_warning_counter += 1
-                if vis_warning_counter > 3:
+                warning_count += 1
+                if vis_warning_counter > 3 or warning_count > 3:
                     terminate_exam = True
                     speak("Exam Terminated: The exam has been stopped due to inappropriate behavior detected.")
-                    return {"Stop the exam": "Exam terminated due to candidate misconduct.", "termination": terminate_exam}
-        return {"No face detected": "No face detected", "termination": terminate_exam}
-
+                    return {"result": "Exam terminated due to candidate misconduct.", "termination": terminate_exam}
+                else:
+                    speak("Attention: Your face is not visible to the camera.")
+                    return {"result": "Not Visible", "termination": terminate_exam}
+        else:      
+            return {"result": "All good !", "termination": terminate_exam}
