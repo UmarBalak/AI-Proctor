@@ -8,6 +8,11 @@ start_time = time.time()
 while time.time() - start_time < 180:
     # print(time.time() - start_time)  # Run for 180 seconds
     ret, frame = camera.read()
+    count = 0
+    for i in frame:
+        count += len(i) 
+    print(len(frame))
+    print(count)
     verification = verify(frame)
     if verification:
         print("Candidate Verified.")

@@ -1,39 +1,3 @@
-import cv2
-import mediapipe as mp
-import time
-import numpy as np
-from numpy import greater
-import utils
-import math
-import pandas as pd
-import pyttsx3
-
-# variables for direction alert
-change_dir_counter = 0
-dir_warning_counter = 0
-vis_warning_counter = 0
-warning_count = 0
-terminate_exam = False
-visibility_counter = 0
-
-# variables 
-frame_counter =0
-TOTAL_BLINKS =0
-frame_counter =0
-
-# constants 
-CLOSED_EYES_FRAME =1
-FONTS =cv2.FONT_HERSHEY_COMPLEX
-
-map_face_mesh = mp.solutions.face_mesh
-face_mesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
-mp_drawing = mp.solutions.drawing_utils
-drawing_spec = mp_drawing.DrawingSpec(color=(255, 255, 255),thickness=1,circle_radius=1)
-
-camera = cv2.VideoCapture(0)
-
-start_time = time.time()
-        
 def speak(text):
     engine = pyttsx3.init()
     engine.say(text)
@@ -319,7 +283,7 @@ alerts  = {"visibility": ["Face is not visible", "Attention: Your face is not vi
       "direction": ["Alert: It seems you are not facing the camera.", "Alert: It seems you are not facing the camera."] }
 
 def run():
-    global change_dir_counter, start_time, dir_warning_counter, terminate_exam, visibility_counter, vis_warning_counter, warning_count, alerts
+    global change_dir_counter, start_time, dir_warning_counter, visibility_counter, vis_warning_counter, warning_count, alerts
     ret, frame = camera.read()
 #     print(frame)
     frame = cv2.flip(frame, 1)
@@ -361,16 +325,15 @@ def run():
                 dir_warning_counter += 1
                 warning_count += 1
                 if dir_warning_counter > 3 or warning_count > 3:    
-                    terminate_exam = True
                     speak(alerts["termination"][1])
-                    return {"result": alerts["termination"][0], "termination": terminate_exam}
+                    return alerts["termination"][0]
                 speak(alerts["direction"][1])
-                return {"result": alerts["direction"][0], "termination": terminate_exam}
+                return alerts["direction"][0]
         
-            return {"result": "All good !", "termination": terminate_exam}
+            return "All good !"
         
         else:          
-            return {"result": "All good !", "termination": terminate_exam}
+            return "All good !"
     else:
         end = time.time()
         totalTime = end - start_time  
@@ -388,12 +351,11 @@ def run():
                 vis_warning_counter += 1
                 warning_count += 1
                 if vis_warning_counter > 3 or warning_count > 3:
-                    terminate_exam = True
                     speak(alerts["termination"][1])
-                    return {"result": alerts["termination"][0], "termination": terminate_exam}
+                    return alerts["termination"][0]
                 else:
                     speak(alerts["visibility"][1])
-                    return {"result": alerts["visibility"][0], "termination": terminate_exam}
+                    return alerts["visibility"][0]
         else:      
-            return {"result": "All good !", "termination": terminate_exam}
+            return "All good !"
 
