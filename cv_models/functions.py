@@ -6,10 +6,18 @@ from numpy import greater
 import utils
 import math
 import pandas as pd
+import pyttsx3
+import pygame
+
+# variables for direction alert
+change_dir_counter = 0
+dir_warning_counter = 0
+vis_warning_counter = 0
+terminate_exam = False
+visibility_counter = 0
 
 # variables 
 frame_counter =0
-CEF_COUNTER =0
 TOTAL_BLINKS =0
 frame_counter =0
 
@@ -26,9 +34,15 @@ camera = cv2.VideoCapture(0)
 
 start_time = time.time()
 
-
+def play_mp3(mp3_file):
+    pygame.init()
+    pygame.mixer.init()
+    pygame.mixer.music.load(mp3_file)
+    pygame.mixer.music.play()
+    while pygame.mixer.music.get_busy():
+        pygame.time.Clock().tick(10)
+        
 def speak(text):
-    import pyttsx3
     engine = pyttsx3.init()
     engine.say(text)
     engine.runAndWait()
@@ -182,12 +196,12 @@ def eye_track(ret, frame, rgb_frame, results):
 
     ratio = blinkRatio(frame, mesh_coords, RIGHT_EYE, LEFT_EYE)
 
-    if ratio > 5.5:
-        CEF_COUNTER +=1
-    else:
-        if CEF_COUNTER > CLOSED_EYES_FRAME:
-            TOTAL_BLINKS +=1
-            CEF_COUNTER = 0
+#     if ratio > 5.5:
+#         counter_threshold +=1
+#     else:
+#         if counter_threshold > CLOSED_EYES_FRAME:
+#             TOTAL_BLINKS +=1
+#             counter_threshold = 0
 
     frame_h, frame_w, _ = frame.shape
     output = face_mesh.process(rgb_frame)
@@ -310,6 +324,7 @@ def calculate_distance(distance_pixel, distance_cm, success, image):
 
 
 def run():
+    global change_dir_counter, start_time, dir_warning_counter, terminate_exam, visibility_counter, vis_warning_counter
     ret, frame = camera.read()
 #     print(frame)
     frame = cv2.flip(frame, 1)
@@ -334,14 +349,43 @@ def run():
         distance_pixel = distance_df['distance_pixel'].tolist()
         distance_cm = distance_df['distance_cm'].tolist()
         distance_cm = calculate_distance(distance_pixel, distance_cm, ret, frame)
+        
+        end = time.time()
+        totalTime = end - start_time  
+        fps = 1 / totalTime
+        start_time = end      
+#         print(fps)  
 
-#         end = time.time()
-#         totalTime = end - start_time  
-#         if totalTime > 0:
-#             fps = 1 / totalTime
-#         else:
-#             fps = 0
-    
-        return {"direction": direction, "distance": distance_cm}
+        if direction in ["Right", "Left", "Up"]:
+            change_dir_counter += (1/fps)
+            if change_dir_counter > 5:
+                change_dir_counter = 0
+                dir_warning_counter += 1
+                if dir_warning_counter > 3:
+                    terminate_exam = True
+                    speak("Exam Terminated: The exam has been stopped due to inappropriate behavior detected.")
+                    return {"Stop the exam": "Exam terminated due to candidate misconduct.", "termination": terminate_exam}
+                speak("Alert: It seems you are not facing the camera.")
+                return {"direction": f"Alert {dir_warning_counter}: It seems you are not facing the camera.", "termination": terminate_exam}
+        
+            return {"direction": "All good !", "termination": terminate_exam}
+        
+        else:          
+            return {"direction": "All good !", "termination": terminate_exam}
     else:
-        return {"face_detected": "jaldi waha se hatooo"}
+        end = time.time()
+        totalTime = end - start_time  
+        fps = 1 / totalTime
+        start_time = end
+        
+        speak("Attention: Your face is not visible to the camera.")
+        visibility_counter += (1/fps)
+        if visibility_counter > 5:
+                visibility_counter = 0
+                vis_warning_counter += 1
+                if vis_warning_counter > 3:
+                    terminate_exam = True
+                    speak("Exam Terminated: The exam has been stopped due to inappropriate behavior detected.")
+                    return {"Stop the exam": "Exam terminated due to candidate misconduct.", "termination": terminate_exam}
+        return {"No face detected": "No face detected", "termination": terminate_exam}
+
