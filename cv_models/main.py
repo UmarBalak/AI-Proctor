@@ -1,11 +1,11 @@
 from functions import *
 while True:
-    result = run()
+    output = run()
     # if everything goes well, returns a python dictionary-->
     #    {"direction": direction, "distance": distance}
     # else returns a python dictionary-->
     #    {"face_detected": False}
-    if result["termination"] is True:
-        print(result)
+    if output["termination"] is True:
+        print(output["result"])
         break
-    print(result)
+    print(output["result"])
