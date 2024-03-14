@@ -377,8 +377,13 @@ def run():
         fps = 1 / totalTime
         start_time = end
         
+        vis_threshold = 0
         visibility_counter += (1/fps)
-        if visibility_counter > 10:
+        if visibility_counter == 1:
+            vis_threshold = 5
+        else:
+            vis_threshold = 10
+        if visibility_counter > vis_threshold:
                 visibility_counter = 0
                 vis_warning_counter += 1
                 warning_count += 1
@@ -391,5 +396,4 @@ def run():
                     return {"result": alerts["visibility"][0], "termination": terminate_exam}
         else:      
             return {"result": "All good !", "termination": terminate_exam}
-        
 
