@@ -7,7 +7,6 @@ import utils
 import math
 import pandas as pd
 import pyttsx3
-import pygame
 
 # variables for direction alert
 change_dir_counter = 0
@@ -34,14 +33,6 @@ drawing_spec = mp_drawing.DrawingSpec(color=(255, 255, 255),thickness=1,circle_r
 camera = cv2.VideoCapture(0)
 
 start_time = time.time()
-
-def play_mp3(mp3_file):
-    pygame.init()
-    pygame.mixer.init()
-    pygame.mixer.music.load(mp3_file)
-    pygame.mixer.music.play()
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)
         
 def speak(text):
     engine = pyttsx3.init()
@@ -323,9 +314,12 @@ def calculate_distance(distance_pixel, distance_cm, success, image):
 
         return distance_cm
 
+alerts  = {"visibility": ["Face is not visible", "Attention: Your face is not visible to the camera."],
+       "termination": ["Exam terminated due to candidate misconduct.", "Exam terminated due to candidate misconduct."],
+      "direction": ["Alert: It seems you are not facing the camera.", "Alert: It seems you are not facing the camera."] }
 
 def run():
-    global change_dir_counter, start_time, dir_warning_counter, terminate_exam, visibility_counter, vis_warning_counter, warning_count
+    global change_dir_counter, start_time, dir_warning_counter, terminate_exam, visibility_counter, vis_warning_counter, warning_count, alerts
     ret, frame = camera.read()
 #     print(frame)
     frame = cv2.flip(frame, 1)
@@ -335,6 +329,8 @@ def run():
     results = face_mesh.process(rgb_frame)
     
     direction = ''
+    if warning_count == 3:
+        speak("This is the last warning, After this, your exam will be terminated")
     
     if results.multi_face_landmarks:
         
@@ -357,12 +353,6 @@ def run():
         start_time = end      
 #         print(fps)  
 
-        
-#         if direction in ["Right", "Left", "Up"]:
-#             change_dir_counter += (1/fps)
-#             if change_dir_counter > 5:
-#                 change_dir_counter = 0
-
 
         if direction in ["Right", "Left", "Up"]:
             change_dir_counter += (1/fps)
@@ -370,12 +360,12 @@ def run():
                 change_dir_counter = 0
                 dir_warning_counter += 1
                 warning_count += 1
-                if dir_warning_counter > 3 or warning_count > 3:
+                if dir_warning_counter > 3 or warning_count > 3:    
                     terminate_exam = True
-                    speak("Exam Terminated: The exam has been stopped due to inappropriate behavior detected.")
-                    return {"result": "Exam terminated due to candidate misconduct.", "termination": terminate_exam}
-                speak("Alert: It seems you are not facing the camera.")
-                return {"result": f"Alert {dir_warning_counter}: It seems you are not facing the camera.", "termination": terminate_exam}
+                    speak(alerts["termination"][1])
+                    return {"result": alerts["termination"][0], "termination": terminate_exam}
+                speak(alerts["direction"][1])
+                return {"result": alerts["direction"][0], "termination": terminate_exam}
         
             return {"result": "All good !", "termination": terminate_exam}
         
@@ -388,16 +378,18 @@ def run():
         start_time = end
         
         visibility_counter += (1/fps)
-        if visibility_counter > 5:
+        if visibility_counter > 10:
                 visibility_counter = 0
                 vis_warning_counter += 1
                 warning_count += 1
                 if vis_warning_counter > 3 or warning_count > 3:
                     terminate_exam = True
-                    speak("Exam Terminated: The exam has been stopped due to inappropriate behavior detected.")
-                    return {"result": "Exam terminated due to candidate misconduct.", "termination": terminate_exam}
+                    speak(alerts["termination"][1])
+                    return {"result": alerts["termination"][0], "termination": terminate_exam}
                 else:
-                    speak("Attention: Your face is not visible to the camera.")
-                    return {"result": "Not Visible", "termination": terminate_exam}
+                    speak(alerts["visibility"][1])
+                    return {"result": alerts["visibility"][0], "termination": terminate_exam}
         else:      
             return {"result": "All good !", "termination": terminate_exam}
+        
+
