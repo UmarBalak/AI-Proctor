@@ -1,6 +1,7 @@
 import cv2
 import face_recognition
 import numpy as np
+import time
 
 # Load a known face image
 known_image = face_recognition.load_image_file("tony.jpeg")
