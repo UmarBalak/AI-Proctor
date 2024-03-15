@@ -1,9 +1,7 @@
-from functions import *
+from yolo_functions import *
 
 camera = cv2.VideoCapture(0)
 
 while True:
-    ret, frame = camera.read()
-    print(frame)
-    count = obj_detect(frame)
+    count = obj_detect(camera)
     print(count)

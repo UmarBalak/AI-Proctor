@@ -4,7 +4,9 @@ import cvzone
 import cv2
 import math
 
-model = YOLOWorld('yolov8s-world.pt')
+# model = YOLOWorld('yolov8s-world.pt')
+model = YOLO('yolov8n.pt')
+
 classNames = [
     "person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
     "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
@@ -19,12 +21,13 @@ classNames = [
 ]
 desired_features = ["person", "book", "cell phone", "laptop"]
 
-def obj_detect(image):
+def obj_detect(camera):
+    ret, image = camera.read()
     if image is None:
         print("Error: Failed to capture frame")
         return {"person": None, "book": None, "cell phone": None, "laptop": None}
     
-    image = cv2.flip(image, 1)
+    # image = cv2.flip(image, 1)
     results = model.predict(image, device='cpu')
 
     count = {"person": 0, "book": 0, "cell phone": 0, "laptop": 0}
