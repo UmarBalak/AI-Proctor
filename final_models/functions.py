@@ -340,22 +340,17 @@ classNames = [
     "teddy bear", "hair drier", "toothbrush"
 ]
 # Define the desired features
-desired_features = ["person", "book", "cell phone", "laptop"]
+desired_features = ["person", "book", "cell phone"]
 
 # Define the maximum duration before triggering the alert (in seconds)
-MAX_ALERT_DURATION = 5  # Adjust as needed
+MAX_ALERT_DURATION = 8 
 
 # Initialize the timer
 alert_timer = 0
 alert_triggered = False
 
-def obj_detect(camera):
+def obj_detect(ret, image):
     global alert_timer, alert_triggered, start_time
-    
-    ret, image = camera.read()
-   
-    # Flip the image horizontally
-    image = cv2.flip(image, 1)
     
     # Perform object detection
     results = model.predict(image, device='cpu')
@@ -379,9 +374,9 @@ def obj_detect(camera):
                 w, h = x2 - x1, y2 - y1  # Calculate width and height of the bounding box
                 
                 # Draw the bounding box and label
-                cvzone.cornerRect(image, (x1, y1, w, h))
-                conf = round(box.conf[0].item(), 2) # Round confidence score to two decimal places
-                cvzone.putTextRect(image, f'{class_name} {conf}', (max(0, x1), max(35, y1)), scale=1, thickness=1) 
+                # cvzone.cornerRect(image, (x1, y1, w, h))
+                # conf = round(box.conf[0].item(), 2) # Round confidence score to two decimal places
+                # cvzone.putTextRect(image, f'{class_name} {conf}', (max(0, x1), max(35, y1)), scale=1, thickness=1) 
                 
                 # Increment count for the detected class
                 count[desired_features.index(class_name)] += 1  
@@ -391,7 +386,7 @@ def obj_detect(camera):
     start_time = end
 
     # Check if person count exceeds threshold
-    if count[0] > 1:
+    if count[0] > 1 or count[0] == 0 or count[1] > 0 or count[2] > 0:
         # Increment the alert timer
         alert_timer += (1/fps)
         if alert_timer > MAX_ALERT_DURATION:
@@ -421,10 +416,13 @@ def run():
     direction = ''
     if warning_count == 3:
         speak("This is the last warning, After this, your exam will be terminated")
-        warning_count = 0
-    
-    if results.multi_face_landmarks:
-        
+    ##########################################################################################################################
+    obj_detect =  obj_detect(ret, frame)
+    if obj_detect is False:
+        speak("")
+        return False
+    ##########################################################################################################################
+    if results.multi_face_landmarks:    
         head_direction = head_pose(rgb_frame, results)
         
         if head_direction in ["Center", "Up"]:
