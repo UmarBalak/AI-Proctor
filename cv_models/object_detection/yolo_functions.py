@@ -35,7 +35,7 @@ alert_timer = 0
 alert_triggered = False
 
 def obj_detect(camera):
-    global alert_timer, alert_triggered
+    global alert_timer, alert_triggered, start_time
     
     ret, image = camera.read()
    
@@ -70,21 +70,25 @@ def obj_detect(camera):
                 
                 # Increment count for the detected class
                 count[desired_features.index(class_name)] += 1  
-    
+    end = time.time()
+    totalTime = end - start_time  
+    fps = 1 / totalTime
+    start_time = end
+
     # Check if person count exceeds threshold
-    if count[desired_features.index("person")] > 2:
+    if count[0] > 1:
         # Increment the alert timer
-        alert_timer += 1
+        alert_timer += (1/fps)
         if alert_timer > MAX_ALERT_DURATION:
             # Trigger alert
             alert_triggered = True
-            alert_timer = 0  # Reset the timer after alert
-
+            alert_timer = 0
+            return False  # Reset the timer after alert
     # Display the image
     # cv2.imshow("Image", image)
     # cv2.waitKey(1)
     
-    return count, alert_triggered
+    return True
 
 
 
