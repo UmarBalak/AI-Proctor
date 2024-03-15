@@ -29,7 +29,7 @@ face_mesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
 mp_drawing = mp.solutions.drawing_utils
 drawing_spec = mp_drawing.DrawingSpec(color=(255, 255, 255),thickness=1,circle_radius=1)
 
-
+camera = cv2.VideoCapture(0)
 
 start_time = time.time()
 
@@ -331,6 +331,7 @@ def run():
     direction = ''
     if warning_count == 3:
         speak("This is the last warning, After this, your exam will be terminated")
+        warning_count = 0
     
     if results.multi_face_landmarks:
         
@@ -342,10 +343,10 @@ def run():
         else:
             direction = head_direction
 
-        distance_df = pd.read_csv('distance_xy.csv')
-        distance_pixel = distance_df['distance_pixel'].tolist()
-        distance_cm = distance_df['distance_cm'].tolist()
-        distance_cm = calculate_distance(distance_pixel, distance_cm, ret, frame)
+#         distance_df = pd.read_csv('distance_xy.csv')
+#         distance_pixel = distance_df['distance_pixel'].tolist()
+#         distance_cm = distance_df['distance_cm'].tolist()
+#         distance_cm = calculate_distance(distance_pixel, distance_cm, ret, frame)
         
         end = time.time()
         totalTime = end - start_time  
@@ -360,16 +361,16 @@ def run():
                 change_dir_counter = 0
                 dir_warning_counter += 1
                 warning_count += 1
-                if dir_warning_counter > 3 or warning_count > 3:    
-                    speak(alerts["termination"][1])
-                    return alerts["termination"][0]
+#                 if dir_warning_counter > 3 or warning_count > 3:    
+#                     speak(alerts["termination"][1])
+#                     return False
                 speak(alerts["direction"][1])
-                return alerts["direction"][0]
+                return False
         
-            return "All good !"
+            return True
         
         else:          
-            return "All good !"
+            return True
     else:
         end = time.time()
         totalTime = end - start_time  
@@ -383,15 +384,17 @@ def run():
         else:
             vis_threshold = 10
         if visibility_counter > vis_threshold:
-                visibility_counter = 0
-                vis_warning_counter += 1
-                warning_count += 1
-                if vis_warning_counter > 3 or warning_count > 3:
-                    speak(alerts["termination"][1])
-                    return alerts["termination"][0]
-                else:
-                    speak(alerts["visibility"][1])
-                    return alerts["visibility"][0]
+            speak(alerts["visibility"][1])
+            visibility_counter = 0
+            vis_warning_counter += 1
+            warning_count += 1   
+            return False
+#                 if vis_warning_counter > 3 or warning_count > 3:
+#                     speak(alerts["termination"][1])
+#                     return False
+#                 else:
+#                     speak(alerts["visibility"][1])
+#                     return False                
         else:      
-            return "All good !"
+            return True
 
