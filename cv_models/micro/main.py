@@ -46,7 +46,7 @@ def compare_files(text, paper):
 
 while True:
     text = listen()
-    print(text)
+    # print(text)
 
     with open("paper.txt", "r") as file:
     # Read the content of the file
