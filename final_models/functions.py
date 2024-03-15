@@ -349,6 +349,8 @@ alert_timer = 0
 alert_triggered = False
 
 def obj_detect(ret, image):
+    # if not ret:
+    #     return True
     global alert_timer, alert_triggered, start_time
     
     # Perform object detection
@@ -381,11 +383,14 @@ def obj_detect(ret, image):
                 count[desired_features.index(class_name)] += 1  
     end = time.time()
     totalTime = end - start_time  
-    fps = 1 / totalTime
+    if totalTime > 0:
+        fps = 1 / totalTime
+    else:
+        fps = 0
     start_time = end
 
     # Check if person count exceeds threshold
-    if count[0] > 1 or count[0] == 0 or count[1] > 0 or count[2] > 0:
+    if count[0] > 1 or count[1] > 0 or count[2] > 0:
         # Increment the alert timer
         alert_timer += (1/fps)
         if alert_timer > MAX_ALERT_DURATION:
@@ -413,13 +418,12 @@ def run(camera):
     results = face_mesh.process(rgb_frame)
     
     direction = ''
-    if warning_count == 3:
-        speak("This is the last warning, After this, your exam will be terminated")
+        
     ##########################################################################################################################
-    obj_detect =  obj_detect(ret, frame)
-    if obj_detect is False:
-        speak("")
-        return False
+    # obj_d =  obj_detect(ret, frame)
+    # if obj_d is False:
+    #     speak("Warning: An important object has been detected.")
+    #     return False
     #############################################################################################
     if results.multi_face_landmarks:    
         head_direction = head_pose(rgb_frame, results)
@@ -436,13 +440,18 @@ def run(camera):
         
         end = time.time()
         totalTime = end - start_time  
-        fps = 1 / totalTime
+        if totalTime > 0:
+            fps = 1 / totalTime
+        else:
+            fps = 0
         start_time = end      
 #         print(fps)  
 
-
         if direction in ["Right", "Left", "Up"]:
-            change_dir_counter += (1/fps)
+            if fps > 0:
+                change_dir_counter += (1/fps)
+            else:
+                change_dir_counter += 0.5
             if change_dir_counter > 2:
                 change_dir_counter = 0
                 dir_warning_counter += 1
@@ -452,19 +461,32 @@ def run(camera):
 #                     return False
                 speak(alerts["direction"][1])
                 return False
-        
+            obj_d =  obj_detect(ret, frame)
+            if not obj_d:
+                speak("Warning: An important object has been detected.")
+                return False
             return True
         
-        else:          
+        else:  
+            obj_d =  obj_detect(ret, frame)
+            if obj_d is False:
+                speak("Warning: An important object has been detected.")
+                return False        
             return True
     else:
         end = time.time()
         totalTime = end - start_time  
-        fps = 1 / totalTime
+        if totalTime > 0:
+            fps = 1 / totalTime
+        else:
+            fps = 0
         start_time = end
         
         vis_threshold = 0
-        visibility_counter += (1/fps)
+        if fps > 0:
+            visibility_counter += (1/fps)
+        else:
+            visibility_counter += 0.5
 
         vis_threshold = 5
         if vis_warning_counter > 1:
@@ -481,7 +503,11 @@ def run(camera):
 #                 else:
 #                     speak(alerts["visibility"][1])
 #                     return False                
-        else:      
+        else:   
+            obj_d =  obj_detect(ret, frame)
+            if obj_d is False:
+                speak("Warning: An important object has been detected.")
+                return False   
             return True
 
 
