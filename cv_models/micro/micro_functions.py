@@ -1,4 +1,14 @@
 import speech_recognition as sr
+import speech_recognition as sr
+import wave
+import os
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+
+# Download NLTK resources
+nltk.download('punkt')
+nltk.download('stopwords')
 
 def listen():
     r = sr.Recognizer()
@@ -16,19 +26,6 @@ def listen():
         print("Error:", str(e))
         return None
 
-
-import speech_recognition as sr
-import wave
-import os
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-
-# Download NLTK resources
-nltk.download('punkt')
-nltk.download('stopwords')
-
-
 def compare_files(text, paper):
     word_tokens_1 = word_tokenize(text)
     word_tokens_2 = word_tokenize(paper)
@@ -44,13 +41,3 @@ def compare_files(text, paper):
 
     return similarity_percentage
 
-while True:
-    text = listen()
-    # print(text)
-
-    with open("paper.txt", "r") as file:
-    # Read the content of the file
-        paper = file.read()
-
-    similarity = compare_files(text, paper)
-    print(f"Similarity : {similarity:.2f}%")
