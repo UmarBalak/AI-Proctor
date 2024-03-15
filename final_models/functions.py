@@ -34,7 +34,6 @@ face_mesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
 mp_drawing = mp.solutions.drawing_utils
 drawing_spec = mp_drawing.DrawingSpec(color=(255, 255, 255),thickness=1,circle_radius=1)
 
-camera = cv2.VideoCapture(0)
 
 start_time = time.time()
 
@@ -403,7 +402,7 @@ def obj_detect(ret, image):
 
 ################################################################################################################################################
 
-def run():
+def run(camera):
     global change_dir_counter, start_time, dir_warning_counter, visibility_counter, vis_warning_counter, warning_count, alerts
     ret, frame = camera.read()
 #     print(frame)
@@ -431,10 +430,9 @@ def run():
         else:
             direction = head_direction
 
-#         distance_df = pd.read_csv('distance_xy.csv')
-#         distance_pixel = distance_df['distance_pixel'].tolist()
-#         distance_cm = distance_df['distance_cm'].tolist()
-#         distance_cm = calculate_distance(distance_pixel, distance_cm, ret, frame)
+        distance_pixel = [178, 150, 137, 111, 94, 81, 65, 54]
+        distance_cm = [19, 22, 27, 34, 42, 49, 61, 72]
+        distance_cm = calculate_distance(distance_pixel, distance_cm, ret, frame)
         
         end = time.time()
         totalTime = end - start_time  

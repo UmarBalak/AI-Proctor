@@ -1,5 +1,4 @@
 import speech_recognition as sr
-import speech_recognition as sr
 import wave
 import os
 import nltk
