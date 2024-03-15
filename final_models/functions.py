@@ -420,7 +420,7 @@ def run(camera):
     if obj_detect is False:
         speak("")
         return False
-    ##########################################################################################################################
+    #############################################################################################
     if results.multi_face_landmarks:    
         head_direction = head_pose(rgb_frame, results)
         
