@@ -3,5 +3,9 @@ from yolo_functions import *
 camera = cv2.VideoCapture(0)
 
 while True:
-    count = obj_detect(camera)
-    print(count)
+    counts = obj_detect(camera)
+    print(counts)
+
+
+# camera.release()
+# cv2.destroyAllWindows()
