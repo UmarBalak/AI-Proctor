@@ -488,9 +488,9 @@ def run(camera):
         else:
             visibility_counter += 0.5
 
-        vis_threshold = 5
+        vis_threshold = 3
         if vis_warning_counter > 1:
-            vis_threshold = 8
+            vis_threshold = 5
         if visibility_counter > vis_threshold:
             speak(alerts["visibility"][1])
             visibility_counter = 0
