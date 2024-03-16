@@ -390,7 +390,7 @@ def obj_detect(ret, image):
     if count[0] > 1 or count[1] > 0 or count[2] > 0:
         # Increment the alert timer
         alert_timer += 1
-        if alert_timer > 100:
+        if alert_timer > 15:
             # Trigger alert
             alert_triggered = True
             alert_timer = 0
@@ -451,7 +451,7 @@ def run(camera):
             #     change_dir_counter += 0.5
             change_dir_counter += 1
             print(change_dir_counter)
-            if change_dir_counter > 65:
+            if change_dir_counter > 40: # 65 good
                 change_dir_counter = 0
                 dir_warning_counter += 1
                 warning_count += 1
