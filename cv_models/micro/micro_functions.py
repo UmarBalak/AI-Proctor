@@ -40,3 +40,28 @@ def compare_files(text, paper):
 
     return similarity_percentage
 
+import nltk
+from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Download stopwords data (you may need to do this the first time you run the code)
+nltk.download('stopwords')
+def cosine(text, paper):
+# Tokenize and preprocess the documents
+    vectorizer = TfidfVectorizer(stop_words='english')  # Use 'english' for built-in stopwords
+    tfidf_matrix = vectorizer.fit_transform([text, paper])
+
+    # # Calculate cosine similarity
+    # cosine_sim = cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])
+
+    # # Print the similarity score
+    # print(f"Cosine Similarity: {cosine_sim[0][0]}")
+
+
+    # Calculate cosine similarity
+    cosine_sim = cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])[0][0]
+
+    # Convert similarity to percentage
+    similarity_percentage = cosine_sim * 100
+    return similarity_percentage
