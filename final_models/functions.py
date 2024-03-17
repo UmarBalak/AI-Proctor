@@ -260,7 +260,7 @@ def head_pose(frame, results):
         y = angles[1] * 360
         z = angles[2] * 360
 
-        if y < -15:
+        if y < -10:
             text = "Left"
         elif y > 10:
             text = "Right"
@@ -453,6 +453,7 @@ def run(camera):
             print(change_dir_counter)
             if change_dir_counter > 40: # 65 good
                 change_dir_counter = 0
+                visibility_counter = 0
                 dir_warning_counter += 1
                 warning_count += 1
 #                 if dir_warning_counter > 3 or warning_count > 3:    
@@ -492,6 +493,7 @@ def run(camera):
         if visibility_counter > 200:
             speak(alerts["visibility"][1])
             visibility_counter = 0
+            change_dir_counter = 0
             vis_warning_counter += 1
             warning_count += 1   
             return False
