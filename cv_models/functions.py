@@ -186,7 +186,7 @@ def eye_track(ret, frame, rgb_frame, results):
     pts_array = np.array(r_eye_pts, np.int32)
     pts_array = pts_array.reshape((-1, 1, 2))
 
-    ratio = blinkRatio(frame, mesh_coords, RIGHT_EYE, LEFT_EYE)
+    # ratio = blinkRatio(frame, mesh_coords, RIGHT_EYE, LEFT_EYE)
 
 #     if ratio > 5.5:
 #         counter_threshold +=1
