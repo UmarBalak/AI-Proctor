@@ -451,7 +451,7 @@ def run(camera):
             #     change_dir_counter += 0.5
             change_dir_counter += 1
             print(change_dir_counter)
-            if change_dir_counter > 40: # 65 good
+            if change_dir_counter > 20: # 65 good
                 change_dir_counter = 0
                 visibility_counter = 0
                 dir_warning_counter += 1
@@ -490,7 +490,7 @@ def run(camera):
         # vis_threshold = 5
         # if vis_warning_counter > 1:
         #     vis_threshold = 8
-        if visibility_counter > 200:
+        if visibility_counter > 20:
             speak(alerts["visibility"][1])
             visibility_counter = 0
             change_dir_counter = 0
